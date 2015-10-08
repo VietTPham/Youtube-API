@@ -4,6 +4,7 @@
 import httplib2 #pip install httplib2
 import os
 import sys
+import readline #to do backspace
 #install api
 #pip install --upgrade google-api-python-client
 from apiclient.discovery import build
@@ -55,34 +56,58 @@ def get_authenticated_service():
     http=credentials.authorize(httplib2.Http()))
 
 # This code creates a new, private playlist in the authorized user's channel.
-#def add_new_playlist()
-#playlists_insert_response = youtube.playlists().insert(
-#  part="snippet,status",
-#  body=dict(
-#    snippet=dict(
-#      title="Test Playlist",
-#      description="A private playlist created with the YouTube API v3"
-#    ),
-#    status=dict(
-#      privacyStatus="private"
-#    )
-#  )
-#).execute()
-#
-#print "New playlist id: %s" % playlists_insert_response["id"]
+def add_new_playlist(youtube, playlist_title, playlist_description, playlist_privacy):
+  playlists_insert_response = youtube.playlists().insert(
+  part="snippet,status",
+  body=dict(
+    snippet=dict(
+      title=playlist_title,
+      description=playlist_description
+    ),
+    status=dict(
+      privacyStatus=playlist_privacy
+    )
+  )
+  ).execute()
+  
+  print "New playlist id: %s" % playlists_insert_response["id"]
 
+def delete_playlist(youtube, playlist_id):
+  playlists_delete_response = youtube.playlists().delete(
+    id=playlist_id
+  ).execute()
+  
+  print "Playlist delete successful."
+  #print "New playlist id: %s" % playlists_insert_response["id"]
+  
 def menu():
   selection_num = raw_input("""
   Main Menu
   (1) Add new playlist
-  (2) List video in a playlist
+  (2) Delete a playlist
+  (3) List video in a playlist
   
   (10) Quit
   select: """)
-  if (selection_num == "10"):
+  if (selection_num == "1"):
+    print "\nAdd new playlist"
+    title = raw_input ("Title of new playlist (required): ")
+    description = raw_input ("Description of playlist (optional): ")
+    privacy = raw_input("Privacy of playlist (public/(private)): ")
+    if not privacy:
+      privacy = "private"
+    add_new_playlist(youtube, title, description, privacy)
+  elif (selection_num == "2"):
+    playlist_id = raw_input ("Playlist id: ")
+    make_sure = raw_input ("Are you sure you want to remove the playlist (y/n)? ")
+    if (make_sure == "y"):
+      delete_playlist(youtube, playlist_id)
+  elif (selection_num == "10"):
     print "\nQuitting program. Good Bye"
     exit()
+  else:
+    print "Invalid selection."
 if __name__ == "__main__":
-  #youtube = get_authenticated_service()
+  youtube = get_authenticated_service()
   while (1):
     menu()
