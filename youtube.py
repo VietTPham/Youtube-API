@@ -71,10 +71,18 @@ def get_authenticated_service():
 #
 #print "New playlist id: %s" % playlists_insert_response["id"]
 
-
+def menu():
+  selection_num = raw_input("""
+  Main Menu
+  (1) Add new playlist
+  (2) List video in a playlist
+  
+  (10) Quit
+  select: """)
+  if (selection_num == "10"):
+    print "\nQuitting program. Good Bye"
+    exit()
 if __name__ == "__main__":
   #youtube = get_authenticated_service()
-  playlist = raw_input("Enter the appointment time (y\\n): ")
-  if (playlist == "y"):
-    print "yes"
-  #    add_video_to_playlist(youtube,"yszl2oxi8IY","PL2JW1S4IMwYubm06iDKfDsmWVB-J8funQ")
+  while (1):
+    menu()
