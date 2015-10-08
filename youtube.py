@@ -4,7 +4,7 @@
 import httplib2 #pip install httplib2
 import os
 import sys
-import readline #to do backspace
+import readline #to do backspace, for window use $pip install pyreadline
 #install api
 #pip install --upgrade google-api-python-client
 from apiclient.discovery import build
@@ -85,6 +85,8 @@ def menu():
   Main Menu
   (1) Add new playlist
   (2) Delete a playlist
+  (3) List user subscription
+  (3) Search a channel for all video
   (3) List video in a playlist
   
   (10) Quit
@@ -102,6 +104,19 @@ def menu():
     make_sure = raw_input ("Are you sure you want to remove the playlist (y/n)? ")
     if (make_sure == "y"):
       delete_playlist(youtube, playlist_id)
+  elif (selection_num == "3"):
+    subscription_query = youtube.subscriptions().list(
+    part='id,snippet,contentDetails',
+    mine=True,
+    fields="nextPageToken,pageInfo/totalResults,pageInfo/resultsPerPage,items/snippet/resourceId/channelId"
+    ).execute()
+    #subscription_total_results = subscription_query['pageInfo']['totalResults']
+    #subscription_results_per_page = subscription_query['pageInfo']['resultsPerPage']
+    #print subscription_total_results,subscription_results_per_page
+    for channel in subscription_query['items']:
+      print channel.get('snippet').get('resourceId').get('channelId')
+      
+      
   elif (selection_num == "10"):
     print "\nQuitting program. Good Bye"
     exit()
