@@ -79,7 +79,27 @@ def delete_playlist(youtube, playlist_id):
   
   print "Playlist delete successful."
   #print "New playlist id: %s" % playlists_insert_response["id"]
-  
+
+def get_own_scription_list ( youtube):
+  next_token = ''
+  token_list = ['']
+  subscription_list = []
+  while token_list[ len(token_list) - 1 ] is not None:
+    subscription_query = youtube.subscriptions().list(
+        part = 'snippet',
+        mine = True,
+        maxResults = 50,
+        pageToken = token_list[ len(token_list) - 1 ],
+        order = 'alphabetical',
+        fields = "nextPageToken,items/snippet/resourceId/channelId"
+        ).execute()
+    if subscription_query.get('nextPageToken') is not None:
+      token_list.append(subscription_query.get('nextPageToken'))
+    else:
+      token_list.append(None)
+    for channel in subscription_query['items']:
+      print channel.get('snippet').get('resourceId').get('channelId')
+  return subscription_list
 def menu():
   selection_num = raw_input("""
   Main Menu
@@ -105,17 +125,7 @@ def menu():
     if (make_sure == "y"):
       delete_playlist(youtube, playlist_id)
   elif (selection_num == "3"):
-    subscription_query = youtube.subscriptions().list(
-    part='id,snippet,contentDetails',
-    mine=True,
-    fields="nextPageToken,pageInfo/totalResults,pageInfo/resultsPerPage,items/snippet/resourceId/channelId"
-    ).execute()
-    #subscription_total_results = subscription_query['pageInfo']['totalResults']
-    #subscription_results_per_page = subscription_query['pageInfo']['resultsPerPage']
-    #print subscription_total_results,subscription_results_per_page
-    for channel in subscription_query['items']:
-      print channel.get('snippet').get('resourceId').get('channelId')
-      
+    my_subscription_list = get_own_scription_list ( youtube)
       
   elif (selection_num == "10"):
     print "\nQuitting program. Good Bye"
