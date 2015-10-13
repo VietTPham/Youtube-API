@@ -5,6 +5,7 @@ import httplib2 #pip install httplib2
 import os
 import sys
 import readline #to do backspace, for window use $pip install pyreadline
+import operator #for sorting dictionary
 #install api
 #pip install --upgrade google-api-python-client
 from apiclient.discovery import build
@@ -98,8 +99,48 @@ def get_own_scription_list ( youtube):
     else:
       token_list.append(None)
     for channel in subscription_query['items']:
-      print channel.get('snippet').get('resourceId').get('channelId')
+      subscription_list.append(channel.get('snippet').get('resourceId').get('channelId'))
   return subscription_list
+def get_own_watch_later_playlist_id (youtube):
+  return youtube.channels().list(
+      part = 'contentDetails',
+      mine = True,
+      fields = 'items/contentDetails/relatedPlaylists/watchLater'
+    ).execute()['items'][0].get('contentDetails').get('relatedPlaylists').get('watchLater')
+
+def get_playlist_video (youtube, playlist_id):
+  next_token = ''
+  token_list = ['']
+  video_list = []
+  while token_list[ len(token_list) - 1 ] is not None:
+    playlist_query = youtube.playlistItems().list(
+        part = 'snippet',
+        maxResults = 50,
+        pageToken = token_list[ len(token_list) - 1 ],
+        playlistId = playlist_id,
+        fields = "nextPageToken,items/snippet/publishedAt,items/snippet/resourceId/videoId"
+        ).execute()
+    if playlist_query.get('nextPageToken') is not None:
+      token_list.append(playlist_query.get('nextPageToken'))
+    else:
+      token_list.append(None)
+    for video in playlist_query['items']:
+      #print video.get('snippet').get('publishedAt')
+      #print video.get('snippet').get('channelId')
+      #print video.get('snippet').get('resourceId').get('videoId')
+      channel_id = youtube.videos().list(
+        part = 'snippet',
+        id = video.get('snippet').get('resourceId').get('videoId'),
+        maxResults = 1,
+        fields = 'items/snippet/channelId'
+      ).execute()['items'][0].get('snippet').get('channelId')
+      video_list.append({'publishedAt': video.get('snippet').get('publishedAt'),
+                          'channelId': channel_id,
+                          'videoId': video.get('snippet').get('resourceId').get('videoId')})
+  return video_list
+  #new_list = sorted(video_list, key=lambda k: k['videoId'].lower())
+  #print "68",video_list[68]['videoId']
+  #print len(video_list)
 def menu():
   selection_num = raw_input("""
   Main Menu
@@ -125,8 +166,30 @@ def menu():
     if (make_sure == "y"):
       delete_playlist(youtube, playlist_id)
   elif (selection_num == "3"):
-    my_subscription_list = get_own_scription_list ( youtube)
-      
+    #my_subscription_list = get_own_scription_list ( youtube)
+    #watch_later_playlist_id = get_own_watch_later_playlist_id (youtube)
+    #watch_later_video_list = get_playlist_video (youtube, watch_later_playlist_id)
+    #get_50_video_per_channel = []
+    
+    #for channel in my_subscription_list:
+    #  print channel
+    #  for video in get_playlist_video (youtube, watch_later_playlist_id):
+    #    print video
+    #    get_50_video_per_channel.append(video)
+    print "here"
+    #for channel in my_subscription_list:
+    search_query = youtube.search().list(
+        part = 'snippet',
+        channelId = 'UCWJQeV1fVrBnUXHtWmfUUfA',
+        maxResults = 50,
+        order = 'date',
+        fields = 'items/id/videoId,items/snippet/publishedAt'
+      ).execute().get('items')
+    for i in search_query:
+      print i.get('snippet').get('publishedAt')
+      print i.get('id').get('videoId')
+    #print search_query[0].get('snippet')
+    
   elif (selection_num == "10"):
     print "\nQuitting program. Good Bye"
     exit()
