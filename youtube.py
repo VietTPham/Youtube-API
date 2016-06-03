@@ -131,53 +131,34 @@ def get_playlist_token (youtube, playlist_id):
     
 def get_my_subscriptions_list (youtube): 
   #items/snippet/title,items/snippet/resourceId/channelId
-  channel_list = []
+  channelId_list = []
   token = None
   while True:
-    subscriptions = youtube.subscriptions().list(
+    channelId = youtube.subscriptions().list(
               part = 'snippet',
               maxResults = 50,
               mine = True,
               pageToken = token,
               fields = 'nextPageToken,items/snippet/title,items/snippet/resourceId/channelId').execute()
-    for channel in subscriptions.get('items'):
-      channel_list.append({'title': channel.get('snippet').get('title'), 
+    for channel in channelId.get('items'):
+      channelId_list.append({'title': channel.get('snippet').get('title'), 
                            'channelId': channel.get('snippet').get('resourceId').get('channelId')})
-    token = subscriptions.get('nextPageToken')
+    token = channelId.get('nextPageToken')
     if token == None:
-      return channel_list
+      return channelId_list
     
   
-def get_playlist_video (youtube, playlist_id):
-  next_token = ''
-  token_list = ['']
-  video_list = []
-  while token_list[ len(token_list) - 1 ] is not None:
-    playlist_query = youtube.playlistItems().list(
-        part = 'snippet',
-        maxResults = 50,
-        pageToken = token_list[ len(token_list) - 1 ],
-        playlistId = playlist_id,
-        fields = "nextPageToken,items/snippet"
-        ).execute()
-    if playlist_query.get('nextPageToken') is not None:
-      token_list.append(playlist_query.get('nextPageToken'))
-    else:
-      token_list.append(None)
-    for video in playlist_query['items']:
-      #channel_id = youtube.videos().list(
-      #  part = 'snippet',
-      #  id = video.get('snippet').get('resourceId').get('videoId'),
-      #  maxResults = 1,
-      #).execute()
-      #video_list.append({'publishedAt': video.get('snippet').get('publishedAt'),
-      #                    'title': video.get('snippet').get('title'),
-      #                    'videoId': video.get('snippet').get('resourceId').get('videoId')})
-      video_list.append({'title': video.get('snippet').get('title')})
-  return video_list
-  #new_list = sorted(video_list, key=lambda k: k['videoId'].lower())
-  #print "68",video_list[68]['videoId']
-  #print len(video_list)
+def get_playlist_video_list (youtube, playlist_id):
+  videoId_list = []
+  token = None
+  while True:
+    videoId = youtube.playlistItems().list(
+                      part = 'snippet',
+                      maxResults = 50,
+                      pageToken = token_list[ len(token_list) - 1 ],
+                      playlistId = playlist_id,
+                      fields = "nextPageToken,items/snippet"
+                      ).execute()
 
 def menu():
   selection_num = raw_input("""
