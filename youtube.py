@@ -126,7 +126,6 @@ def get_playlist_token (youtube, playlist_id):
             playlistId = playlist_id,
             fields = 'nextPageToken').execute().get('nextPageToken')
     if token == None:
-      print all_pageToken
       return all_pageToken
     all_pageToken.append(token)
 
@@ -135,18 +134,26 @@ def get_subscriptions_token (youtube):
   while True:
     token = youtube.subscriptions().list(
             part = 'snippet',
-            maxResults = 2,
+            maxResults = 50,
             mine = True,
             pageToken = all_pageToken[-1],
             fields = 'nextPageToken').execute().get('nextPageToken')
     if token == None:
-      print all_pageToken
       return all_pageToken
     all_pageToken.append(token)
     
-def get_own_subscriptions_list (youtube): 
+def get_my_subscriptions_list (youtube, subscription_token): 
   #items/snippet/title,items/snippet/resourceId/channelId
-  print youtube.playlistItems().list().execute()
+  channel_list = []
+  for token in subscription_token:
+    channel_list.append(youtube.subscriptions().list(
+      part = 'snippet',
+      maxResults = 50,
+      mine = True,
+      pageToken = token,
+      fields = 'items/snippet/title,items/snippet/resourceId/channelId').execute().get('items'))
+  for channel in channel_list:
+    print channel
   
 def get_playlist_video (youtube, playlist_id):
   next_token = ''
@@ -221,7 +228,8 @@ def menu():
   elif (selection_num == "5"):
     get_playlist_token(youtube, get_own_watchLater_playlist_id(youtube))
   elif (selection_num == "6"):
-    get_subscriptions_token(youtube)
+    
+    get_my_subscriptions_list(youtube,get_subscriptions_token(youtube) )
   elif (selection_num == "10" or "Q" or "q"):
     print "\nQuitting program. Good Bye"
     exit()
