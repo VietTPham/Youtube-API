@@ -128,32 +128,25 @@ def get_playlist_token (youtube, playlist_id):
     if token == None:
       return all_pageToken
     all_pageToken.append(token)
-
-def get_subscriptions_token (youtube):
-  all_pageToken = [None]
-  while True:
-    token = youtube.subscriptions().list(
-            part = 'snippet',
-            maxResults = 50,
-            mine = True,
-            pageToken = all_pageToken[-1],
-            fields = 'nextPageToken').execute().get('nextPageToken')
-    if token == None:
-      return all_pageToken
-    all_pageToken.append(token)
     
-def get_my_subscriptions_list (youtube, subscription_token): 
+def get_my_subscriptions_list (youtube): 
   #items/snippet/title,items/snippet/resourceId/channelId
   channel_list = []
-  for token in subscription_token:
-    channel_list.append(youtube.subscriptions().list(
-      part = 'snippet',
-      maxResults = 50,
-      mine = True,
-      pageToken = token,
-      fields = 'items/snippet/title,items/snippet/resourceId/channelId').execute().get('items'))
-  for channel in channel_list:
-    print channel
+  token = None
+  while True:
+    subscriptions = youtube.subscriptions().list(
+              part = 'snippet',
+              maxResults = 50,
+              mine = True,
+              pageToken = token,
+              fields = 'nextPageToken,items/snippet/title,items/snippet/resourceId/channelId').execute()
+    for channel in subscriptions.get('items'):
+      channel_list.append({'title': channel.get('snippet').get('title'), 
+                           'channelId': channel.get('snippet').get('resourceId').get('channelId')})
+    token = subscriptions.get('nextPageToken')
+    if token == None:
+      return channel_list
+    
   
 def get_playlist_video (youtube, playlist_id):
   next_token = ''
@@ -229,7 +222,7 @@ def menu():
     get_playlist_token(youtube, get_own_watchLater_playlist_id(youtube))
   elif (selection_num == "6"):
     
-    get_my_subscriptions_list(youtube,get_subscriptions_token(youtube) )
+    get_my_subscriptions_list ( youtube )
   elif (selection_num == "10" or "Q" or "q"):
     print "\nQuitting program. Good Bye"
     exit()
