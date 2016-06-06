@@ -16,33 +16,32 @@ from oauth2client.file import Storage
 from oauth2client.tools import argparser, run_flow #easy_install argparse
 
 
-CLIENT_SECRETS_FILE = "client_secrets.json"
-
-# This variable defines a message to display if the CLIENT_SECRETS_FILE is
-# missing.
-MISSING_CLIENT_SECRETS_MESSAGE = """
-WARNING: Please configure OAuth 2.0
-
-To make this sample run you will need to populate the client_secrets.json file
-found at:
-
-   %s
-
-with information from the Developers Console
-https://console.developers.google.com/
-
-For more information about the client_secrets.json file format, please visit:
-https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
-""" % os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                   CLIENT_SECRETS_FILE))
-
-# This OAuth 2.0 access scope allows for full read/write access to the
-# authenticated user's account.
-YOUTUBE_READ_WRITE_SCOPE = "https://www.googleapis.com/auth/youtube"
-YOUTUBE_API_SERVICE_NAME = "youtube"
-YOUTUBE_API_VERSION = "v3"
-
 def get_authenticated_service():
+  CLIENT_SECRETS_FILE = "client_secrets.json"
+
+  # This variable defines a message to display if the CLIENT_SECRETS_FILE is
+  # missing.
+  MISSING_CLIENT_SECRETS_MESSAGE = """
+  WARNING: Please configure OAuth 2.0
+
+  To make this sample run you will need to populate the client_secrets.json file
+  found at:
+
+     %s
+
+  with information from the Developers Console
+  https://console.developers.google.com/
+
+  For more information about the client_secrets.json file format, please visit:
+  https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
+  """ % os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                     CLIENT_SECRETS_FILE))
+
+  # This OAuth 2.0 access scope allows for full read/write access to the
+  # authenticated user's account.
+  YOUTUBE_READ_WRITE_SCOPE = "https://www.googleapis.com/auth/youtube"
+  YOUTUBE_API_SERVICE_NAME = "youtube"
+  YOUTUBE_API_VERSION = "v3"
   flow = flow_from_clientsecrets(CLIENT_SECRETS_FILE,
     message=MISSING_CLIENT_SECRETS_MESSAGE,
     scope=YOUTUBE_READ_WRITE_SCOPE)
@@ -60,18 +59,17 @@ def get_authenticated_service():
 # This code creates a new, private playlist in the authorized user's channel.
 def add_new_playlist(youtube, playlist_title, playlist_description, playlist_privacy):
   playlists_insert_response = youtube.playlists().insert(
-  part="snippet,status",
-  body=dict(
-    snippet=dict(
-      title=playlist_title,
-      description=playlist_description
-    ),
-    status=dict(
-      privacyStatus=playlist_privacy
-    )
-  )
-  ).execute()
-  
+                                part="snippet,status",
+                                body=dict(
+                                  snippet=dict(
+                                    title=playlist_title,
+                                    description=playlist_description
+                                  ),
+                                  status=dict(
+                                    privacyStatus=playlist_privacy
+                                  )
+                                )
+                                ).execute()
   print "New playlist id: %s" % playlists_insert_response["id"]
 
 def delete_playlist(youtube, playlist_id):
@@ -80,57 +78,57 @@ def delete_playlist(youtube, playlist_id):
   ).execute()
   
   print "Playlist delete successful."
-  #print "New playlist id: %s" % playlists_insert_response["id"]
 
-def get_own_scription_list ( youtube):
-  next_token = ''
-  token_list = ['']
-  subscription_list = []
-  while token_list[ len(token_list) - 1 ] is not None:
-    subscription_query = youtube.subscriptions().list(
-        part = 'snippet',
-        mine = True,
-        maxResults = 50,
-        pageToken = token_list[ len(token_list) - 1 ],
-        order = 'alphabetical',
-        fields = "nextPageToken,items/snippet/resourceId/channelId"
-        ).execute()
-    if subscription_query.get('nextPageToken') is not None:
-      token_list.append(subscription_query.get('nextPageToken'))
-    else:
-      token_list.append(None)
-    for channel in subscription_query['items']:
-      subscription_list.append(channel.get('snippet').get('resourceId').get('channelId'))
-  return subscription_list
-def get_own_watchLater_playlist_id (youtube):
-  return youtube.channels().list(
-      part = 'contentDetails',
-      mine = True,
-      fields = 'items/contentDetails/relatedPlaylists/watchLater'
-    ).execute()['items'][0].get('contentDetails').get('relatedPlaylists').get('watchLater')
-    
-def get_own_watchHistory_playlist_id (youtube):
-  return youtube.channels().list(
-      part = 'contentDetails',
-      mine = True,
-      fields = 'items/contentDetails/relatedPlaylists/watchHistory'
-    ).execute()['items'][0].get('contentDetails').get('relatedPlaylists').get('watchHistory')
-
-def get_playlist_token (youtube, playlist_id):
-  all_pageToken = [None]
+def get_my_playlist (youtube):
+  playlistId_list = []
+  #get playlist for special playlist
+  playlist_1 = youtube.channels().list(
+                part = 'contentDetails',
+                mine = True,
+                fields = 'items/contentDetails/relatedPlaylists'
+              ).execute()['items'][0].get('contentDetails').get('relatedPlaylists')
+  #don't really know a better way to do the 5 lines below
+  playlistId_list.append({
+                          'title': 'watchLater',
+                          'playlistId' : playlist_1.get('watchLater')
+                        })
+  playlistId_list.append({
+                          'title': 'watchHistory',
+                          'playlistId' : playlist_1.get('watchHistory')
+                        })
+  playlistId_list.append({
+                          'title': 'likes',
+                          'playlistId' : playlist_1.get('likes')
+                        })
+  playlistId_list.append({
+                          'title': 'favorites',
+                          'playlistId' : playlist_1.get('favorites')
+                        })
+  playlistId_list.append({
+                          'title': 'uploads',
+                          'playlistId' : playlist_1.get('uploads')
+                        })
+  
+  #user created playlist
+  token = None
   while True:
-    token = youtube.playlistItems().list(
-            part = 'snippet',
-            maxResults = 50,
-            pageToken = all_pageToken[-1], 
-            playlistId = playlist_id,
-            fields = 'nextPageToken').execute().get('nextPageToken')
+    playlist_2 = youtube.playlists().list(
+                part="snippet",
+                maxResults=1,
+                mine=True,
+                pageToken=token,
+                fields="nextPageToken,items/snippet/channelId,items/snippet/title"
+              ).execute()
+    token = playlist_2.get('nextPageToken')
+    for playlist in playlist_2['items']:
+      playlistId_list.append({
+                              'title' : playlist.get('snippet').get('title'),
+                              'playlistId' : playlist.get('snippet').get('channelId')
+                            })
     if token == None:
-      return all_pageToken
-    all_pageToken.append(token)
+      return playlistId_list
     
 def get_my_subscriptions_list (youtube): 
-  #items/snippet/title,items/snippet/resourceId/channelId
   channelId_list = []
   token = None
   while True:
@@ -203,12 +201,14 @@ def menu():
     get_playlist_token(youtube, get_own_watchLater_playlist_id(youtube))
   elif (selection_num == "6"):
     
-    get_my_subscriptions_list ( youtube )
+    #get_my_subscriptions_list ( youtube )
+    get_my_playlist ( youtube )
   elif (selection_num == "10" or "Q" or "q"):
     print "\nQuitting program. Good Bye"
     exit()
   else:
     print "Invalid selection."
+
 if __name__ == "__main__":
   youtube = get_authenticated_service()
   while (1):
