@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -x
 
 #yum install python-pip
 #pip install --upgrade pip
@@ -14,6 +14,8 @@ from apiclient.errors import HttpError
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.file import Storage
 from oauth2client.tools import argparser, run_flow #easy_install argparse
+
+
 
 
 def get_authenticated_service():
@@ -164,9 +166,6 @@ def menu():
   (1) Add new playlist
   (2) Delete a playlist
   (3) List user subscription
-  (4) Get watchLater ID
-  (5) List video in watchLater playlist
-  (6) List all subscription
   (10/q) Quit
   select: """)
   if (selection_num == "1"):
@@ -178,38 +177,22 @@ def menu():
       privacy = "private"
     add_new_playlist(youtube, title, description, privacy)
   elif (selection_num == "2"):
+    #TODO: need to make this so it uses name instead of Id
     playlist_id = raw_input ("Playlist id: ")
     make_sure = raw_input ("Are you sure you want to remove the playlist (y/n)? ")
     if (make_sure == "y"):
       delete_playlist(youtube, playlist_id)
   elif (selection_num == "3"):
-    search_query = youtube.search().list(
-        part = 'snippet',
-        channelId = 'UCWJQeV1fVrBnUXHtWmfUUfA',
-        maxResults = 50,
-        order = 'date',
-        fields = 'items/id/videoId,items/snippet/publishedAt'
-      ).execute().get('items')
-    for i in search_query:
-      print i.get('snippet').get('publishedAt')
-      print i.get('id').get('videoId')
-    #print search_query[0].get('snippet')
-  elif (selection_num == "4"):
-    print get_own_watchLater_playlist_id(youtube)
-    print get_own_watchHistory_playlist_id(youtube)
-  elif (selection_num == "5"):
-    get_playlist_token(youtube, get_own_watchLater_playlist_id(youtube))
-  elif (selection_num == "6"):
-    
-    #get_my_subscriptions_list ( youtube )
     get_my_playlist ( youtube )
-  elif (selection_num == "10" or "Q" or "q"):
+  #elif (selection_num == "10" or "Q" or "q"):
+  elif selection_num in ('10', 'Q', 'q'):
     print "\nQuitting program. Good Bye"
     exit()
   else:
     print "Invalid selection."
+    return
 
 if __name__ == "__main__":
   youtube = get_authenticated_service()
-  while (1):
+  while True:
     menu()
