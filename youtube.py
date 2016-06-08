@@ -1,4 +1,4 @@
-#!/usr/bin/python -x
+#!/usr/bin/python
 
 #yum install python-pip
 #pip install --upgrade pip
@@ -74,12 +74,47 @@ def add_new_playlist(youtube, playlist_title, playlist_description, playlist_pri
                                 ).execute()
   print "New playlist id: %s" % playlists_insert_response["id"]
 
-def delete_playlist(youtube, playlist_id):
-  playlists_delete_response = youtube.playlists().delete(
-    id=playlist_id
-  ).execute()
+def delete_playlist(youtube):
+  print '\n\n  Delete playlist menu'
+  playlistId_list = []
+  for playlist in get_my_playlist ( youtube ):
+    #prevent special playlist from adding to list
+    if ( playlist['title'] in ( 'favorites', 'likes', 'uploads', 'watchHistory', 'watchLater')):
+      continue
+    else : 
+      playlistId_list.append ( playlist )
   
-  print "Playlist delete successful."
+  if ( len(playlistId_list) == 0 ) :
+    print "No valid playlist to delete"
+    return
+  else :
+    playlistId_list = sorted (playlistId_list, key=lambda k: k['title'].lower())
+    while True:
+      
+      for i in range(0, len(playlistId_list)):
+        print "  " + str ( i ) + ':', playlistId_list[i]['title']
+      print '  q: return to menu.'
+      input = raw_input('Select a playlist to delete [1-'+str(len(playlistId_list))+']: ')
+      if ( input in ( 'q', 'Q' )):
+        return
+      try:
+        int ( input )
+      except ValueError:
+        print 'ERROR: Invalid input.\n'
+      else:
+        if (( int ( input ) < 1  ) or ( int ( input ) >= len ( playlistId_list ))):
+          print 'ERROR: Invalid input.\n'
+        else :
+          sure_check = raw_input('Are you sure you want to delete the playlist '+str(playlistId_list[int(input)]['title']) + ' (y/[n])? ') or 'n'
+          print sure_check
+          if ( sure_check.lower() == 'y' ):
+            print 'Deleting playlist ' + str(playlistId_list[int(input)]['title'])
+            youtube.playlists().delete(id = playlistId_list[int(input)]['playlistId']).execute()
+            return
+          elif (sure_check.lower() == 'n' ):
+            return
+          else : 
+            'ERROR: Invalid input.\n'
 
 def get_my_playlist (youtube):
   playlistId_list = []
@@ -91,23 +126,23 @@ def get_my_playlist (youtube):
               ).execute()['items'][0].get('contentDetails').get('relatedPlaylists')
   #don't really know a better way to do the 5 lines below
   playlistId_list.append({
-                          'title': 'watchLater',
+                          'title': u'watchLater',
                           'playlistId' : playlist_1.get('watchLater')
                         })
   playlistId_list.append({
-                          'title': 'watchHistory',
+                          'title': u'watchHistory',
                           'playlistId' : playlist_1.get('watchHistory')
                         })
   playlistId_list.append({
-                          'title': 'likes',
+                          'title': u'likes',
                           'playlistId' : playlist_1.get('likes')
                         })
   playlistId_list.append({
-                          'title': 'favorites',
+                          'title': u'favorites',
                           'playlistId' : playlist_1.get('favorites')
                         })
   playlistId_list.append({
-                          'title': 'uploads',
+                          'title': u'uploads',
                           'playlistId' : playlist_1.get('uploads')
                         })
   
@@ -119,13 +154,13 @@ def get_my_playlist (youtube):
                 maxResults=1,
                 mine=True,
                 pageToken=token,
-                fields="nextPageToken,items/snippet/channelId,items/snippet/title"
+                fields="nextPageToken,items/id,items/snippet/title"
               ).execute()
     token = playlist_2.get('nextPageToken')
     for playlist in playlist_2['items']:
       playlistId_list.append({
                               'title' : playlist.get('snippet').get('title'),
-                              'playlistId' : playlist.get('snippet').get('channelId')
+                              'playlistId' : playlist.get('id')
                             })
     if token == None:
       return playlistId_list
@@ -178,10 +213,7 @@ def menu():
     add_new_playlist(youtube, title, description, privacy)
   elif (selection_num == "2"):
     #TODO: need to make this so it uses name instead of Id
-    playlist_id = raw_input ("Playlist id: ")
-    make_sure = raw_input ("Are you sure you want to remove the playlist (y/n)? ")
-    if (make_sure == "y"):
-      delete_playlist(youtube, playlist_id)
+    delete_playlist ( youtube )
   elif (selection_num == "3"):
     get_my_playlist ( youtube )
   #elif (selection_num == "10" or "Q" or "q"):
@@ -189,7 +221,7 @@ def menu():
     print "\nQuitting program. Good Bye"
     exit()
   else:
-    print "Invalid selection."
+    print "Invalid input."
     return
 
 if __name__ == "__main__":
