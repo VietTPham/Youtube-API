@@ -15,9 +15,7 @@ from oauth2client.client import flow_from_clientsecrets
 from oauth2client.file import Storage
 from oauth2client.tools import argparser, run_flow #easy_install argparse
 
-
-
-
+#authorizing api key
 def get_authenticated_service():
   CLIENT_SECRETS_FILE = "client_secrets.json"
 
@@ -74,6 +72,7 @@ def add_new_playlist(youtube, playlist_title, playlist_description, playlist_pri
                                 ).execute()
   print "New playlist id: %s" % playlists_insert_response["id"]
 
+#delete playlist smartly
 def delete_playlist(youtube):
   print '\n\n  Delete playlist menu'
   playlistId_list = []
@@ -164,7 +163,8 @@ def get_my_playlist (youtube):
                             })
     if token == None:
       return playlistId_list
-    
+
+#return a dictionary with 'channelTitle' and 'channelId'
 def get_my_subscriptions_list (youtube): 
   channelId_list = []
   token = None
@@ -176,25 +176,51 @@ def get_my_subscriptions_list (youtube):
               pageToken = token,
               fields = 'nextPageToken,items/snippet/title,items/snippet/resourceId/channelId').execute()
     for channel in channelId.get('items'):
-      channelId_list.append({'title': channel.get('snippet').get('title'), 
-                           'channelId': channel.get('snippet').get('resourceId').get('channelId')})
+      channelId_list.append({ 'channelTitle': channel.get('snippet').get('title'), 
+                              'channelId': channel.get('snippet').get('resourceId').get('channelId')
+                           })
     token = channelId.get('nextPageToken')
     if token == None:
       return channelId_list
     
-  
+#return dictionary with 'id', 'publishedAt', 'title', and 'channelTitle'
 def get_playlist_video_list (youtube, playlist_id):
   videoId_list = []
+  videoId_str = ''
   token = None
   while True:
     videoId = youtube.playlistItems().list(
                       part = 'snippet',
                       maxResults = 50,
-                      pageToken = token_list[ len(token_list) - 1 ],
-                      playlistId = playlist_id,
-                      fields = "nextPageToken,items/snippet"
+                      pageToken = token,
+                      playlistId = 'WLO2sY8dA4DODmOojyEIxlqw',
+                      fields = "nextPageToken,items/snippet/resourceId/videoId"
                       ).execute()
-
+    token = videoId.get('nextPageToken')
+    for video in videoId['items']:
+      #temporary video list that store videoID
+      #playlistItems does not give details such as title of the video, channelTitle, and original publishedAt date 
+      videoId_str += str(video.get('snippet').get('resourceId').get('videoId')) + ','
+    if ( token == None ):
+      break
+  token = None
+  while True:
+    videoId = youtube.videos().list(
+                      part = 'snippet',
+                      pageToken = token,
+                      id = videoId_str,
+                      fields = "nextPageToken,items/id,items/snippet/publishedAt,items/snippet/title,items/snippet/channelTitle"
+                      ).execute()
+    token = videoId.get('nextPageToken')
+    for video in videoId['items']:
+      videoId_list.append({ 'id': video.get('id'),
+                            'publishedAt': video.get('snippet').get('publishedAt'),
+                            'title': video.get('snippet').get('title'),
+                            'channelTitle': video.get('snippet').get('channelTitle')
+                         })
+    if ( token == None ):
+      return videoId_list
+      
 def menu():
   selection_num = raw_input("""
   Main Menu
@@ -212,11 +238,11 @@ def menu():
       privacy = "private"
     add_new_playlist(youtube, title, description, privacy)
   elif (selection_num == "2"):
-    #TODO: need to make this so it uses name instead of Id
     delete_playlist ( youtube )
   elif (selection_num == "3"):
-    get_my_playlist ( youtube )
-  #elif (selection_num == "10" or "Q" or "q"):
+    #print get_my_subscriptions_list ( youtube )
+    #get_my_playlist ( youtube )
+    get_playlist_video_list ( youtube, '')
   elif selection_num in ('10', 'Q', 'q'):
     print "\nQuitting program. Good Bye"
     exit()
