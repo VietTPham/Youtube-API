@@ -182,7 +182,23 @@ def get_my_subscriptions_list (youtube):
     token = channelId.get('nextPageToken')
     if token == None:
       return channelId_list
-    
+
+#return dictionary with 'id', 'publishedAt', 'title', and 'channelTitle' 
+def get_video (youtube, videoId) :
+  videoId_list = []
+  videoId = youtube.videos().list(
+                      part = 'snippet',
+                      id = videoId,
+                      fields = "nextPageToken,items/id,items/snippet/publishedAt,items/snippet/title,items/snippet/channelTitle"
+                      ).execute()
+  for video in videoId['items']:
+    videoId_list.append({ 'id': video.get('id'),
+                          'publishedAt': video.get('snippet').get('publishedAt'),
+                          'title': video.get('snippet').get('title'),
+                          'channelTitle': video.get('snippet').get('channelTitle')
+                        })
+  return videoId_list
+  
 #return dictionary with 'id', 'publishedAt', 'title', and 'channelTitle'
 def get_playlist_video_list (youtube, playlist_id):
   videoId_list = []
@@ -193,7 +209,7 @@ def get_playlist_video_list (youtube, playlist_id):
                       part = 'snippet',
                       maxResults = 50,
                       pageToken = token,
-                      playlistId = 'WLO2sY8dA4DODmOojyEIxlqw',
+                      playlistId = playlist_id,
                       fields = "nextPageToken,items/snippet/resourceId/videoId"
                       ).execute()
     token = videoId.get('nextPageToken')
@@ -202,25 +218,10 @@ def get_playlist_video_list (youtube, playlist_id):
       #playlistItems does not give details such as title of the video, channelTitle, and original publishedAt date 
       videoId_str += str(video.get('snippet').get('resourceId').get('videoId')) + ','
     if ( token == None ):
-      break
-  token = None
-  while True:
-    videoId = youtube.videos().list(
-                      part = 'snippet',
-                      pageToken = token,
-                      id = videoId_str,
-                      fields = "nextPageToken,items/id,items/snippet/publishedAt,items/snippet/title,items/snippet/channelTitle"
-                      ).execute()
-    token = videoId.get('nextPageToken')
-    for video in videoId['items']:
-      videoId_list.append({ 'id': video.get('id'),
-                            'publishedAt': video.get('snippet').get('publishedAt'),
-                            'title': video.get('snippet').get('title'),
-                            'channelTitle': video.get('snippet').get('channelTitle')
-                         })
-    if ( token == None ):
-      return videoId_list
-      
+      return get_video ( youtube, videoId_str )
+
+def get_channel_video_list ( youtube, channelId):
+  print 'stuff'
 def menu():
   selection_num = raw_input("""
   Main Menu
@@ -241,8 +242,9 @@ def menu():
     delete_playlist ( youtube )
   elif (selection_num == "3"):
     #print get_my_subscriptions_list ( youtube )
-    #get_my_playlist ( youtube )
-    get_playlist_video_list ( youtube, '')
+    #print get_my_playlist ( youtube )
+    print get_playlist_video_list ( youtube, 'WLO2sY8dA4DODmOojyEIxlqw')
+    #get_channel_video_list ( youtube, 'UCXuqSBlHAE6Xw-yeJA0Tunw')
   elif selection_num in ('10', 'Q', 'q'):
     print "\nQuitting program. Good Bye"
     exit()
