@@ -1,4 +1,4 @@
-#!/usr/bin/python -x
+#!/usr/bin/python
 
 #yum install python-pip
 #pip install --upgrade pip
@@ -243,17 +243,20 @@ def get_watchLater_playlist_newest_video ( youtube ):
   for title in get_my_playlist ( youtube ):
     if ( title.get('title') == 'watchLater' ) :
       videoId_list = sorted (get_playlist_video_list ( youtube , title.get('playlistId') ), key=lambda k: k['publishedAt'], reverse=True )
-  my_subscription_list = get_my_subscriptions_list ( youtube )
-  for video in videoId_list:
-    for subscription in my_subscription_list:
-      if ( video.get('channelTitle') == subscription.get('channelTitle') ):
-        return video
+  if len(videoId_list) > 0 :
+    my_subscription_list = get_my_subscriptions_list ( youtube )
+    for video in videoId_list:
+      for subscription in my_subscription_list:
+        if ( video.get('channelTitle') == subscription.get('channelTitle') ):
+          return video
+  else:
+    print "Please add a video in your subscription list as a starting point."
+    return
         
 #return dictionary with 'id', 'publishedAt', 'title', and 'channelTitle'
 def get_channel_video_list ( youtube, channelId, date = None):
-  #add 1 minute to date
-  #2016-06-09T18:26:11.000Z
-  date = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ') + datetime.timedelta(0,60)
+  #add 15 seconds to date
+  date = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ') + datetime.timedelta(0,15)
   date = str(date.year) + '-' + str(date.month) + '-' + str(date.day) + 'T' + str(date.hour) + ':' + str(date.minute) + ':' + str(date.second) + '.000Z'
   return youtube.search().list(
                               part = 'snippet',
@@ -268,15 +271,15 @@ def get_subscription_video_list ( youtube ):
   video_newest = get_watchLater_playlist_newest_video ( youtube )
   video_list = []
   for channel in get_my_subscriptions_list ( youtube ):
-    channel_video = get_channel_video_list ( youtube, channel.get('channelId'), video_newest.get('publishedAt').replace('000','100') )
-    if ( len(channel_video['items']) > 1  ):
+    channel_video = get_channel_video_list ( youtube, channel.get('channelId'), video_newest.get('publishedAt') )
+    if ( len(channel_video['items']) >= 1  ):
       for video in channel_video['items']:
         try:
-         video_list.append({
-                          'channelTitle' : video.get('snippet').get('channelTitle'),
-                          'publishedAt' : video.get('snippet').get('publishedAt'),
-                          'title' : video.get('snippet').get('title'),
-                          'videoId' : video.get('id').get('videoId')
+          video_list.append({
+                          'channelTitle' : unicodedata.normalize('NFKC', video.get('snippet').get('channelTitle')) ,
+                          'publishedAt' : unicodedata.normalize('NFKC', video.get('snippet').get('publishedAt')) ,
+                          'title' : unicodedata.normalize('NFKC', video.get('snippet').get('title')) ,
+                          'videoId' : unicodedata.normalize('NFKC', video.get('id').get('videoId')) 
                           })
         except:
           continue
@@ -317,9 +320,10 @@ def menu():
   (10/q) Quit
   select: """)
   if (selection_num == "0"): #for debug
-    #get_watchLater_playlist_newest_video ( youtube )
+    print get_watchLater_playlist_newest_video ( youtube )
     #print get_my_subscriptions_list ( youtube )
-    print get_playlist_video_list (youtube, 'WLO2sY8dA4DODmOojyEIxlqw')
+    #print get_playlist_video_list (youtube, 'WLO2sY8dA4DODmOojyEIxlqw')
+    #get_subscription_video_list ( youtube )
   elif (selection_num == "1"):
     add_new_playlist( youtube)
   elif (selection_num == "2"):
