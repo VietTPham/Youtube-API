@@ -7,6 +7,8 @@ import os
 import sys
 import readline #to do backspace, for window use $pip install pyreadline
 import operator #for sorting dictionary
+import unicodedata
+import datetime
 #install api
 #pip install --upgrade google-api-python-client
 from apiclient.discovery import build
@@ -57,7 +59,13 @@ def get_authenticated_service():
     http=credentials.authorize(httplib2.Http()))
 
 # This code creates a new, private playlist in the authorized user's channel.
-def add_new_playlist(youtube, playlist_title, playlist_description, playlist_privacy):
+def add_new_playlist(youtube):
+  print "\nAdd new playlist"
+  playlist_title = raw_input ("Title of new playlist (required): ")
+  playlist_description = raw_input ("Description of playlist (optional): ")
+  playlist_privacy = raw_input("Privacy of playlist (public/(private)): ")
+  if not playlist_privacy:
+    playlist_privacy = "private"
   playlists_insert_response = youtube.playlists().insert(
                                 part="snippet,status",
                                 body=dict(
@@ -185,14 +193,13 @@ def get_my_subscriptions_list (youtube):
       return channelId_list
 
 #return dictionary with 'id', 'publishedAt', 'title', and 'channelTitle' 
-def get_video (youtube, videoId_list) :
-  #TODO: need to fix this so it reads 50 at a time.
+def get_video (youtube, videoId) :
+  videoId_list = []
   videoId = youtube.videos().list(
                       part = 'snippet',
                       id = videoId,
                       fields = "nextPageToken,items/id,items/snippet/publishedAt,items/snippet/title,items/snippet/channelTitle"
                       ).execute()
-  videoId_list = []
   for video in videoId['items']:
     videoId_list.append({ 'id' : video.get('id'),
                           'publishedAt' : video.get('snippet').get('publishedAt'),
@@ -219,7 +226,16 @@ def get_playlist_video_list (youtube, playlist_id):
       #playlistItems does not give details such as title of the video, channelTitle, and original publishedAt date 
       videoId_list.append(str(video.get('snippet').get('resourceId').get('videoId')))
     if ( token == None ):
-      return get_video ( youtube, videoId_list )
+      playlist_videoId_list = []
+      for videoId in videoId_list:
+        _video = get_video ( youtube, videoId)
+        #playlist_videoId_list.append(get_video ( youtube, videoId))
+        playlist_videoId_list.append({ 'id' : _video[0].get('id'),
+                          'publishedAt' : _video[0].get('publishedAt'),
+                          'title' : _video[0].get('title'),
+                          'channelTitle' : _video[0].get('channelTitle')
+                        })
+      return playlist_videoId_list
 
 #return the date of the oldest video from the watchLater playlist that has channelTitle matching my subscription_list
 #return dict with 'id', 'publishedAt', 'title', and 'channelTitle'
@@ -230,11 +246,15 @@ def get_watchLater_playlist_newest_video ( youtube ):
   my_subscription_list = get_my_subscriptions_list ( youtube )
   for video in videoId_list:
     for subscription in my_subscription_list:
-      if ( video.get('channelTitle') == subscription.get('channelTitle') ): 
+      if ( video.get('channelTitle') == subscription.get('channelTitle') ):
         return video
         
 #return dictionary with 'id', 'publishedAt', 'title', and 'channelTitle'
 def get_channel_video_list ( youtube, channelId, date = None):
+  #add 1 minute to date
+  #2016-06-09T18:26:11.000Z
+  date = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ') + datetime.timedelta(0,60)
+  date = str(date.year) + '-' + str(date.month) + '-' + str(date.day) + 'T' + str(date.hour) + ':' + str(date.minute) + ':' + str(date.second) + '.000Z'
   return youtube.search().list(
                               part = 'snippet',
                               channelId = channelId,
@@ -248,7 +268,7 @@ def get_subscription_video_list ( youtube ):
   video_newest = get_watchLater_playlist_newest_video ( youtube )
   video_list = []
   for channel in get_my_subscriptions_list ( youtube ):
-    channel_video = get_channel_video_list ( youtube, channel.get('channelId'), video_newest.get('publishedAt'))
+    channel_video = get_channel_video_list ( youtube, channel.get('channelId'), video_newest.get('publishedAt').replace('000','100') )
     if ( len(channel_video['items']) > 1  ):
       for video in channel_video['items']:
         try:
@@ -276,23 +296,32 @@ def add_video_to_playlist ( youtube, videoId, playlistId ):
                                     }
                             ).execute()
 
+def add_subsription_video_to_watchLater ( youtube ):
+  my_playlist = get_my_playlist ( youtube )
+  playlistId = ''
+  for playlist in my_playlist :
+    if ( playlist.get('title') == 'watchLater' ) :
+      playlistId = playlist.get('playlistId')   
+  for videoId in get_subscription_video_list ( youtube ) :
+    print "Adding " + unicodedata.normalize('NFKC', videoId.get('title') ) + " to watch later playlist"
+    add_video_to_playlist ( youtube, videoId.get('videoId'), playlistId)
+    
 def menu():
   selection_num = raw_input("""
   Main Menu
+  (0) For debugging purposes
   (1) Add new playlist
   (2) Delete a playlist
   (3) List user subscription
   (4) Add subscription video to watch later playlist
   (10/q) Quit
   select: """)
-  if (selection_num == "1"):
-    print "\nAdd new playlist"
-    title = raw_input ("Title of new playlist (required): ")
-    description = raw_input ("Description of playlist (optional): ")
-    privacy = raw_input("Privacy of playlist (public/(private)): ")
-    if not privacy:
-      privacy = "private"
-    add_new_playlist(youtube, title, description, privacy)
+  if (selection_num == "0"): #for debug
+    #get_watchLater_playlist_newest_video ( youtube )
+    #print get_my_subscriptions_list ( youtube )
+    print get_playlist_video_list (youtube, 'WLO2sY8dA4DODmOojyEIxlqw')
+  elif (selection_num == "1"):
+    add_new_playlist( youtube)
   elif (selection_num == "2"):
     delete_playlist ( youtube )
   elif (selection_num == "3"):
@@ -300,16 +329,7 @@ def menu():
     for _video in video:
       print _video
   elif (selection_num == "4"):
-    my_playlist = get_my_playlist ( youtube )
-    playlistId = ''
-    for playlist in my_playlist :
-      if ( playlist.get('title') == 'watchLater' ) :
-        playlistId = playlist.get('playlistId')   
-    for videoId in get_subscription_video_list ( youtube ) :
-      print videoId
-      add_video_to_playlist ( youtube, videoId.get('videoId'), playlistId)
-  elif (selection_num == "5"): #for debug
-    get_watchLater_playlist_newest_video (youtube)
+    add_subsription_video_to_watchLater ( youtube )
   elif selection_num in ('10', 'Q', 'q'):
     print "\nQuitting program. Good Bye"
     exit()
