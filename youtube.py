@@ -202,11 +202,12 @@ def get_video (youtube, videoId) :
                       id = videoId,
                       fields = "nextPageToken,items/id,items/snippet/publishedAt,items/snippet/title,items/snippet/channelTitle"
                       ).execute()
+
   for video in videoId['items']:
-    videoId_list.append({ 'id' : video.get('id'),
-                          'publishedAt' : video.get('snippet').get('publishedAt'),
-                          'title' : video.get('snippet').get('title'),
-                          'channelTitle' : video.get('snippet').get('channelTitle')
+    videoId_list.append({ 'id' : unicodedata.normalize('NFKC', video.get('id')),
+                          'publishedAt' : unicodedata.normalize('NFKC', video.get('snippet').get('publishedAt')),
+                          'title' : unicodedata.normalize('NFKC', video.get('snippet').get('title')),
+                          'channelTitle' : unicodedata.normalize('NFKC', video.get('snippet').get('channelTitle'))
                         })
   return videoId_list
   
@@ -233,11 +234,14 @@ def get_playlist_video_list (youtube, playlist_id):
       for videoId in videoId_list:
         _video = get_video ( youtube, videoId)
         #playlist_videoId_list.append(get_video ( youtube, videoId))
-        playlist_videoId_list.append({ 'id' : _video[0].get('id'),
-                          'publishedAt' : _video[0].get('publishedAt'),
-                          'title' : _video[0].get('title'),
-                          'channelTitle' : _video[0].get('channelTitle')
-                        })
+        try:
+          playlist_videoId_list.append({  'id' : _video[0].get('id'),
+                                          'publishedAt' : _video[0].get('publishedAt'),
+                                          'title' : _video[0].get('title'),
+                                          'channelTitle' : _video[0].get('channelTitle')
+                                        })
+        except:
+          continue
       return playlist_videoId_list
 
 #return the date of the oldest video from the watchLater playlist that has channelTitle matching my subscription_list
