@@ -97,7 +97,6 @@ def delete_playlist(youtube):
   else :
     playlistId_list = sorted (playlistId_list, key=lambda k: k['title'].lower())
     while True:
-      
       for i in range(0, len(playlistId_list)):
         print "  " + str ( i ) + ':', playlistId_list[i]['title']
       print '  q: return to menu.'
@@ -132,27 +131,27 @@ def get_my_playlist (youtube):
                 part = 'contentDetails',
                 mine = True,
                 fields = 'items/contentDetails/relatedPlaylists'
-              ).execute()['items'][0].get('contentDetails').get('relatedPlaylists')
+              ).execute()['items'][0]['contentDetails']['relatedPlaylists']
   #don't really know a better way to do the 5 lines below
   playlistId_list.append({
                           'title': u'watchLater',
-                          'playlistId' : playlist_1.get('watchLater')
+                          'playlistId' : playlist_1['watchLater']
                         })
   playlistId_list.append({
                           'title': u'watchHistory',
-                          'playlistId' : playlist_1.get('watchHistory')
+                          'playlistId' : playlist_1['watchHistory']
                         })
   playlistId_list.append({
                           'title': u'likes',
-                          'playlistId' : playlist_1.get('likes')
+                          'playlistId' : playlist_1['likes']
                         })
   playlistId_list.append({
                           'title': u'favorites',
-                          'playlistId' : playlist_1.get('favorites')
+                          'playlistId' : playlist_1['favorites']
                         })
   playlistId_list.append({
                           'title': u'uploads',
-                          'playlistId' : playlist_1.get('uploads')
+                          'playlistId' : playlist_1['uploads']
                         })
   
   #user created playlist
@@ -160,7 +159,7 @@ def get_my_playlist (youtube):
   while True:
     playlist_2 = youtube.playlists().list(
                 part="snippet",
-                maxResults=1,
+                maxResults=50,
                 mine=True,
                 pageToken=token,
                 fields="nextPageToken,items/id,items/snippet/title"
@@ -168,8 +167,8 @@ def get_my_playlist (youtube):
     token = playlist_2.get('nextPageToken')
     for playlist in playlist_2['items']:
       playlistId_list.append({
-                              'title' : playlist.get('snippet').get('title'),
-                              'playlistId' : playlist.get('id')
+                              'title' : playlist['snippet']['title'],
+                              'playlistId' : playlist['id']
                             })
     if token == None:
       return playlistId_list
@@ -186,9 +185,9 @@ def get_my_subscriptions_list (youtube):
               mine = True,
               pageToken = token,
               fields = 'nextPageToken,items/snippet/title,items/snippet/resourceId/channelId').execute()
-    for channel in channelId.get('items'):
-      channelId_list.append({ 'channelTitle': channel.get('snippet').get('title'), 
-                              'channelId': channel.get('snippet').get('resourceId').get('channelId')
+    for channel in channelId['items']:
+      channelId_list.append({ 'channelTitle': channel['snippet']['title'], 
+                              'channelId': channel['snippet']['resourceId']['channelId']
                            })
     token = channelId.get('nextPageToken')
     if token == None:
@@ -204,10 +203,10 @@ def get_video (youtube, videoId) :
                       ).execute()
 
   for video in videoId['items']:
-    videoId_list.append({ 'id' : unicodedata.normalize('NFKC', video.get('id')),
-                          'publishedAt' : unicodedata.normalize('NFKC', video.get('snippet').get('publishedAt')),
-                          'title' : unicodedata.normalize('NFKC', video.get('snippet').get('title')),
-                          'channelTitle' : unicodedata.normalize('NFKC', video.get('snippet').get('channelTitle'))
+    videoId_list.append({ 'id' : unicodedata.normalize('NFKC', video['id']),
+                          'publishedAt' : unicodedata.normalize('NFKC', video['snippet']['publishedAt']),
+                          'title' : unicodedata.normalize('NFKC', video['snippet']['title']),
+                          'channelTitle' : unicodedata.normalize('NFKC', video['snippet']['channelTitle'])
                         })
   return videoId_list
   
@@ -228,22 +227,46 @@ def get_playlist_video_list (youtube, playlist_id):
     for video in videoId['items']:
       #temporary video list that store videoID
       #playlistItems does not give details such as title of the video, channelTitle, and original publishedAt date 
-      videoId_list.append(str(video.get('snippet').get('resourceId').get('videoId')))
+      videoId_list.append(str(video['snippet']['resourceId']['videoId']))
     if ( token == None ):
       playlist_videoId_list = []
       for videoId in videoId_list:
         _video = get_video ( youtube, videoId)
         #playlist_videoId_list.append(get_video ( youtube, videoId))
         try:
-          playlist_videoId_list.append({  'id' : _video[0].get('id'),
-                                          'publishedAt' : _video[0].get('publishedAt'),
-                                          'title' : _video[0].get('title'),
-                                          'channelTitle' : _video[0].get('channelTitle')
+         playlist_videoId_list.append({  'id' : _video[0]['id'],
+                                          'publishedAt' : _video[0]['publishedAt'],
+                                          'title' : _video[0]['title'],
+                                          'channelTitle' : _video[0]['channelTitle']
                                         })
         except:
           continue
       return playlist_videoId_list
 
+#return dictionary with 'id', 'title', and 'videoId'
+def get_playlist_video_id_list (youtube, playlist_id):
+  playlist_videoId_list = []
+  token = None
+  while True:
+    videoId = youtube.playlistItems().list(
+                      part = 'snippet',
+                      maxResults = 50,
+                      pageToken = token,
+                      playlistId = playlist_id,
+                      fields = "items(id,snippet(resourceId/videoId,title)),nextPageToken"
+                      ).execute()
+    token = videoId.get('nextPageToken')
+    print videoId
+    for video in videoId['items']:
+      playlist_videoId_list.append ({ 'id' : unicodedata.normalize('NFKC', video['id']),
+                                      'title' : unicodedata.normalize('NFKC', video['snippet']['title']),
+                                      'videoId' : unicodedata.normalize('NFKC', video['snippet']['resourceId']['videoId'])
+                                    })
+    if (token == None):
+      return playlist_videoId_list
+#delete a video from a playlist, the id is unique to the item in the playlist
+def delete_video_from_playlist (youtube, id):
+  youtube.playlistItems().delete(id = id).execute()
 #return the date of the oldest video from the watchLater playlist that has channelTitle matching my subscription_list
 #return dict with 'id', 'publishedAt', 'title', and 'channelTitle'
 def get_watchLater_playlist_newest_video ( youtube ):
@@ -252,7 +275,7 @@ def get_watchLater_playlist_newest_video ( youtube ):
     my_subscription_list = get_my_subscriptions_list ( youtube )
     for video in videoId_list:
       for subscription in my_subscription_list:
-        if ( video.get('channelTitle') == subscription.get('channelTitle') ):
+        if ( video['channelTitle'] == subscription['channelTitle'] ):
           return video
   else:
     print "Please add a video in your subscription list as a starting point."
@@ -277,15 +300,15 @@ def get_subscription_video_list ( youtube ):
   video_newest = get_watchLater_playlist_newest_video ( youtube )
   video_list = []
   for channel in get_my_subscriptions_list ( youtube ):
-    channel_video = get_channel_video_list ( youtube, channel.get('channelId'), video_newest.get('publishedAt') )
+    channel_video = get_channel_video_list ( youtube, channel['channelId'], video_newest['publishedAt'] )
     if ( len(channel_video['items']) >= 1  ):
       for video in channel_video['items']:
         try:
           video_list.append({
-                          'channelTitle' : unicodedata.normalize('NFKC', video.get('snippet').get('channelTitle')) ,
-                          'publishedAt' : unicodedata.normalize('NFKC', video.get('snippet').get('publishedAt')) ,
-                          'title' : unicodedata.normalize('NFKC', video.get('snippet').get('title')) ,
-                          'videoId' : unicodedata.normalize('NFKC', video.get('id').get('videoId')) 
+                          'channelTitle' : unicodedata.normalize('NFKC', video['snippet']['channelTitle']) ,
+                          'publishedAt' : unicodedata.normalize('NFKC', video['snippet']['publishedAt']) ,
+                          'title' : unicodedata.normalize('NFKC', video['snippet']['title']) ,
+                          'videoId' : unicodedata.normalize('NFKC', video['id']['videoId']) 
                           })
         except:
           continue
@@ -312,9 +335,18 @@ def add_subsription_video_to_watchLater ( youtube ):
     print "No new subscription videos. No videos added to watch later playlist."
     return
   for videoId in subscription_videos:
-    print "  Adding " + unicodedata.normalize('NFKC', videoId.get('title') ) + " to watch later playlist"
-    add_video_to_playlist ( youtube, videoId.get('videoId'), 'WL')
+    print "  Adding " + unicodedata.normalize('NFKC', videoId['title'] ) + " to watch later playlist"
+    add_video_to_playlist ( youtube, videoId['videoId'], 'WL')
   print "Finished adding videos"
+def remove_watched_video_from_watchLater_playlist ( youtube ):
+  print "\nRemoving watched video from watch later playlist"
+  watchLater_list = get_playlist_video_list ( youtube, 'WL' )
+  playlist = get_my_playlist ( youtube )
+  for playlistId in playlist:
+	if playlistId['title'] == "watchHistory":
+		#watchHS = playlistId['playlistId']
+		watchHistory_list = get_playlist_video_list ( youtube, playlistId['playlistId'])
+  
 def menu():
   selection_num = raw_input("""
   Main Menu
@@ -323,13 +355,17 @@ def menu():
   (2) Delete a playlist
   (3) List user subscription
   (4) Add subscription video to watch later playlist
+  (5) Removed videos up to the latest watched video in watch later playlist
   (10/q) Quit
   select: """)
   if (selection_num == "0"): #for debug
     #print get_watchLater_playlist_newest_video ( youtube )
     #print get_my_subscriptions_list ( youtube )
-    print get_playlist_video_list (youtube, 'WL')
+    #print get_playlist_video_list (youtube, )
+    #print get_my_playlist(youtube)
     #print get_subscription_video_list ( youtube )
+    #print get_playlist_video_id_list (youtube, 'WL')
+    #delete_video_from_playlist (youtube, id_here)
   elif (selection_num == "1"):
     add_new_playlist( youtube)
   elif (selection_num == "2"):
@@ -340,6 +376,8 @@ def menu():
       print _video
   elif (selection_num == "4"):
     add_subsription_video_to_watchLater ( youtube )
+  elif (selection_num == "5"):
+    remove_watched_video_from_watchLater_playlist ( youtube )
   elif selection_num in ('10', 'Q', 'q'):
     print "\nQuitting program. Good Bye"
     exit()
@@ -351,4 +389,3 @@ if __name__ == "__main__":
   youtube = get_authenticated_service()
   while True:
     menu()
-
