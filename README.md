@@ -1,3 +1,5 @@
+# Broken
+Due to the new api update, https://developers.google.com/youtube/v3/revision_history, it broke watch later, and watch history, so I cannot check what is the newest video for each playlist. Need a work around this
 # Youtube-API
 The point of this project is to add my subscription video automatically to my watch later.
 Using python, and still doing research on it. I have some feature on it that I am not using.
