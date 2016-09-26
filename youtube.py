@@ -2,15 +2,18 @@
 
 #yum install python-pip
 #pip install --upgrade pip
-import httplib2 #pip install httplib2
+#pip install argparse
+#pip install httplib2
+#install api
+#pip install --upgrade google-api-python-client
+import httplib2
 import os
 import sys
 import readline #to do backspace, for window use $pip install pyreadline
 import operator #for sorting dictionary
 import unicodedata
 import datetime
-#install api
-#pip install --upgrade google-api-python-client
+
 from apiclient.discovery import build
 from apiclient.errors import HttpError
 from oauth2client.client import flow_from_clientsecrets
@@ -97,7 +100,7 @@ def delete_playlist(youtube):
   else :
     playlistId_list = sorted (playlistId_list, key=lambda k: k['title'].lower())
     while True:
-      for i in range(0, len(playlistId_list)):
+      for i in range(1, len(playlistId_list)):
         print "  " + str ( i ) + ':', playlistId_list[i]['title']
       print '  q: return to menu.'
       input = raw_input('Select a playlist to delete [1-'+str(len(playlistId_list))+']: ')
@@ -209,7 +212,11 @@ def get_video (youtube, videoId) :
                           'channelTitle' : unicodedata.normalize('NFKC', video['snippet']['channelTitle'])
                         })
   return videoId_list
-  
+def get_playlistId (youtube, title):
+  for playlist in get_my_playlist (youtube):
+    if playlist['title'] == title:
+      print playlist
+      return playlist
 #return dictionary with 'id', 'publishedAt', 'title', and 'channelTitle'
 def get_playlist_video_list (youtube, playlist_id):
   print "  Getting playlist videos"
@@ -270,16 +277,12 @@ def delete_video_from_playlist (youtube, id):
 #return the date of the oldest video from the watchLater playlist that has channelTitle matching my subscription_list
 #return dict with 'id', 'publishedAt', 'title', and 'channelTitle'
 def get_watchLater_playlist_newest_video ( youtube ):
-  videoId_list = sorted (get_playlist_video_list ( youtube , 'WL' ), key=lambda k: k['publishedAt'], reverse=True )
-  if len(videoId_list) > 0 :
-    my_subscription_list = get_my_subscriptions_list ( youtube )
-    for video in videoId_list:
-      for subscription in my_subscription_list:
-        if ( video['channelTitle'] == subscription['channelTitle'] ):
-          return video
-  else:
-    print "Please add a video in your subscription list as a starting point."
-    return
+  for playlistId in get_my_playlist (youtube):
+      if playlistId['title'] == ".WatchLater":
+        videoId = sorted (get_playlist_video_list ( youtube , playlistId['playlistId'] ), key=lambda k: k['publishedAt'], reverse=True )
+        return videoId[0]
+  print ".WatchLater playlist cannot be found, please create a playlist call \".WatchLater\" and add a video as a starting place"
+  menu()
         
 #return dictionary with 'id', 'publishedAt', 'title', and 'channelTitle'
 def get_channel_video_list ( youtube, channelId, date = None):
@@ -300,7 +303,7 @@ def get_subscription_video_list ( youtube ):
   video_newest = get_watchLater_playlist_newest_video ( youtube )
   video_list = []
   for channel in get_my_subscriptions_list ( youtube ):
-    channel_video = get_channel_video_list ( youtube, channel['channelId'], video_newest['publishedAt'] )
+    channel_video = get_channel_video_list ( youtube, channel['channelId'], video_newest['publishedAt'] )#"2016-09-20T22:30:10.000Z" )
     if ( len(channel_video['items']) >= 1  ):
       for video in channel_video['items']:
         try:
@@ -315,7 +318,8 @@ def get_subscription_video_list ( youtube ):
   return sorted (video_list, key=lambda k: k['publishedAt'])
 
 def add_video_to_playlist ( youtube, videoId, playlistId ):
-  youtube.playlistItems().insert(
+  try:
+    youtube.playlistItems().insert(
                             part = 'snippet',
                             body = {
                                    'snippet': {
@@ -327,6 +331,8 @@ def add_video_to_playlist ( youtube, videoId, playlistId ):
                                               }
                                     }
                             ).execute()
+  except:
+    print "Video already added"
 
 def add_subsription_video_to_watchLater ( youtube ):
   print "\nAdding subscription video to watch later playlist"
@@ -338,6 +344,20 @@ def add_subsription_video_to_watchLater ( youtube ):
     print "  Adding " + unicodedata.normalize('NFKC', videoId['title'] ) + " to watch later playlist"
     add_video_to_playlist ( youtube, videoId['videoId'], 'WL')
   print "Finished adding videos"
+  #delete ".WatchLater" playlist and readd it with updated video"
+  #youtube.playlists().delete(id = get_playlistId(youtube, ".WatchLater")['playlistId').execute()
+  #add ".WatchLater" playlist back and then add video to it
+  #playlists_insert_response = youtube.playlists().insert(
+  #                              part="snippet,status",
+  #                              body=dict(
+  #                                snippet=dict(
+  #                                  title=".WatchLater",
+  #                                ),
+  #                                status=dict(
+  #                                  privacyStatus="private"
+  #                                )
+  #                              )
+  #                              ).execute()
 def remove_watched_video_from_watchLater_playlist ( youtube ):
   print "\nRemoving watched video from watch later playlist"
   watchLater_list = get_playlist_video_list ( youtube, 'WL' )
@@ -366,6 +386,14 @@ def menu():
     #print get_subscription_video_list ( youtube )
     #print get_playlist_video_id_list (youtube, 'WL')
     #delete_video_from_playlist (youtube, id_here)
+    #print get_watchLater_playlist_newest_video ( youtube )
+    #print get_my_playlist (youtube)
+    #print get_my_subscriptions_list ( youtube )
+    #print get_watchLater_playlist_newest_video ( youtube ) This one is causing errors
+    #print get_playlist_video_list ( youtube , "HL" )
+    #print get_watchLater_playlist_newest_video ( youtube )
+    #print get_my_playlist (youtube)
+    print get_playlistId(youtube, ".WatchLater")
   elif (selection_num == "1"):
     add_new_playlist( youtube)
   elif (selection_num == "2"):
@@ -389,3 +417,4 @@ if __name__ == "__main__":
   youtube = get_authenticated_service()
   while True:
     menu()
+
