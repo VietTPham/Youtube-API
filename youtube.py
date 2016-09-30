@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -x
 
 #yum install python-pip
 #pip install --upgrade pip
@@ -215,7 +215,6 @@ def get_video (youtube, videoId) :
 def get_playlistId (youtube, title):
   for playlist in get_my_playlist (youtube):
     if playlist['title'] == title:
-      print playlist
       return playlist
 #return dictionary with 'id', 'publishedAt', 'title', and 'channelTitle'
 def get_playlist_video_list (youtube, playlist_id):
@@ -345,19 +344,20 @@ def add_subsription_video_to_watchLater ( youtube ):
     add_video_to_playlist ( youtube, videoId['videoId'], 'WL')
   print "Finished adding videos"
   #delete ".WatchLater" playlist and readd it with updated video"
-  #youtube.playlists().delete(id = get_playlistId(youtube, ".WatchLater")['playlistId').execute()
+  youtube.playlists().delete(id = get_playlistId(youtube, ".WatchLater")['playlistId']).execute()
   #add ".WatchLater" playlist back and then add video to it
-  #playlists_insert_response = youtube.playlists().insert(
-  #                              part="snippet,status",
-  #                              body=dict(
-  #                                snippet=dict(
-  #                                  title=".WatchLater",
-  #                                ),
-  #                                status=dict(
-  #                                  privacyStatus="private"
-  #                                )
-  #                              )
-  #                              ).execute()
+  playlists_insert_response = youtube.playlists().insert(
+                                part="snippet,status",
+                                body=dict(
+                                  snippet=dict(
+                                    title=".WatchLater",
+                                  ),
+                                  status=dict(
+                                    privacyStatus="private"
+                                  )
+                                )
+                                ).execute()
+  add_video_to_playlist ( youtube, subscription_videos[-1]['videoId'], get_playlistId(youtube, ".WatchLater")['playlistId'])
 def remove_watched_video_from_watchLater_playlist ( youtube ):
   print "\nRemoving watched video from watch later playlist"
   watchLater_list = get_playlist_video_list ( youtube, 'WL' )
@@ -393,7 +393,9 @@ def menu():
     #print get_playlist_video_list ( youtube , "HL" )
     #print get_watchLater_playlist_newest_video ( youtube )
     #print get_my_playlist (youtube)
-    print get_playlistId(youtube, ".WatchLater")
+    #print get_playlistId(youtube, ".WatchLater")
+	subscription_videos = get_subscription_video_list ( youtube )
+	print subscription_videos[-1]['videoId']
   elif (selection_num == "1"):
     add_new_playlist( youtube)
   elif (selection_num == "2"):
@@ -417,4 +419,3 @@ if __name__ == "__main__":
   youtube = get_authenticated_service()
   while True:
     menu()
-
