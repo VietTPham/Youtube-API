@@ -320,7 +320,7 @@ def add_video_to_playlist ( youtube, videoId, playlistId ):
   try:
     youtube.playlistItems().insert(
                             part = 'snippet',
-                            //body = {
+                            body = {
                                    'snippet': {
                                       'playlistId': playlistId, 
                                       'resourceId': {
