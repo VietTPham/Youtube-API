@@ -13,7 +13,7 @@ import readline #to do backspace, for window use $pip install pyreadline
 import operator #for sorting dictionary
 import unicodedata
 import datetime
-
+import time
 from apiclient.discovery import build
 from apiclient.errors import HttpError
 from oauth2client.client import flow_from_clientsecrets
@@ -320,7 +320,7 @@ def add_video_to_playlist ( youtube, videoId, playlistId ):
   try:
     youtube.playlistItems().insert(
                             part = 'snippet',
-                            body = {
+                            //body = {
                                    'snippet': {
                                       'playlistId': playlistId, 
                                       'resourceId': {
@@ -357,6 +357,7 @@ def add_subsription_video_to_watchLater ( youtube ):
                                   )
                                 )
                                 ).execute()
+  time.sleep(3)
   add_video_to_playlist ( youtube, subscription_videos[-1]['videoId'], get_playlistId(youtube, ".WatchLater")['playlistId'])
 def remove_watched_video_from_watchLater_playlist ( youtube ):
   print "\nRemoving watched video from watch later playlist"
